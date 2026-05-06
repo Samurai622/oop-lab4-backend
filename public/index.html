@@ -36,6 +36,9 @@
         .form-group label { display: block; margin-bottom: 5px; }
         .form-group input, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; background: #1e1e1e; border: 1px solid #555; color: white; border-radius: 4px; }
         .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        
+        /* Error text */
+        .error-text { color: var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -46,7 +49,8 @@
             <button class="tab-btn active" onclick="switchTab('task1')">Завдання 1 (Канали)</button>
             <button class="tab-btn" onclick="switchTab('task2')">Завдання 2 (Змагання)</button>
         </div>
-        <!-- ДОДАНО: Перемикач баз даних -->
+        
+        <!-- Перемикач баз даних -->
         <div style="background: #333; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             <strong style="color: #FF9800;">Підключення до API:</strong>
             <select id="envSelect" onchange="changeEnv()" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
@@ -139,20 +143,15 @@
     </dialog>
 
     <script>
-        // --- УТИЛІТА ДЛЯ API ЗАПИТІВ ---
-        async function api(url, method = 'GET', body = null) {
-            // Глобальна змінна для адреси сервера
+        // ВИПРАВЛЕНО: Глобальні змінні та функції повинні бути ОКОРЕМО від api()
         let baseUrl = '';
 
-        // Функція зміни сервера
         function changeEnv() {
             baseUrl = document.getElementById('envSelect').value;
-            // Перезавантажуємо поточну відкриту вкладку
             if (document.getElementById('task1').classList.contains('active')) loadChannels();
             else loadComps();
         }
 
-        // --- ОНОВЛЕНА УТИЛІТА ДЛЯ API ЗАПИТІВ ---
         async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
             if (body) { 
@@ -160,7 +159,6 @@
                 options.body = JSON.stringify(body); 
             }
             
-            // ДОДАНО: baseUrl перед url
             const res = await fetch(baseUrl + url, options);
             
             if (!res.ok) {
@@ -168,7 +166,6 @@
                 throw new Error(errorData.error || "Невідома помилка сервера");
             }
             return res.json();
-        }
         }
 
         // Вкладки
@@ -184,6 +181,13 @@
         async function loadChannels() {
             try {
                 const channels = await api('/api/task1/channels');
+                
+                // ЗАХИСТ: Якщо CORS заблокував запит або сервер пустий
+                if (!channels || !Array.isArray(channels)) {
+                    document.getElementById('channels-container').innerHTML = '<span class="error-text">Немає доступу до бази даних.</span>';
+                    return;
+                }
+
                 let html = '';
                 let order = 1;
                 for (const ch of channels) {
@@ -201,7 +205,6 @@
                     const fullCh = await api(`/api/task1/channels/${ch.id}`);
                     if (fullCh.devices) {
                         for (const d of fullCh.devices) {
-                            // ФІКС: Безпечне читання через Optional Chaining (?.)
                             const magType = d.Sensor?.magnitudeType ?? 'Н/Д';
                             const curVal = d.Sensor?.currentValue ?? 'Н/Д';
 
@@ -218,7 +221,9 @@
                     order++;
                 }
                 document.getElementById('channels-container').innerHTML = html || 'Немає каналів.';
-            } catch (e) { alert(e); }
+            } catch (e) { 
+                document.getElementById('channels-container').innerHTML = `<span class="error-text">Помилка: ${e.message}</span>`;
+            }
         }
 
         function openChannelModal(id = '', name = '') {
@@ -237,7 +242,7 @@
                 else await api('/api/task1/channels', 'POST', body);
                 document.getElementById('channelModal').close();
                 loadChannels();
-            } catch (err) { alert(err); } // Покаже помилку валідації від Node.js
+            } catch (err) { alert(err); } 
         }
 
         async function deleteChannel(id) {
@@ -247,7 +252,6 @@
         function openDeviceModal(channelId, device = null) {
             document.getElementById('deviceChannelId').value = channelId;
             
-            // ФІКС: Безпечне заповнення форми
             document.getElementById('deviceId').value = device?.id || '';
             document.getElementById('sensorId').value = device?.SensorId || '';
             document.getElementById('devLoc').value = device?.locationNumber || '';
@@ -266,7 +270,7 @@
             e.preventDefault();
             const cId = document.getElementById('deviceChannelId').value;
             const dId = document.getElementById('deviceId').value;
-            const sId = document.getElementById('sensorId').value; // Отримуємо ID сенсора
+            const sId = document.getElementById('sensorId').value; 
             
             const sensorData = {
                 magnitudeType: parseInt(document.getElementById('sensType').value),
@@ -283,12 +287,10 @@
 
             try {
                 if (!dId) {
-                    // Створення нового пристрою
                     const sensor = await api('/api/task1/sensors', 'POST', sensorData);
                     deviceData.SensorId = sensor.id;
                     await api('/api/task1/devices', 'POST', deviceData);
                 } else {
-                    // ФІКС: Оновлення існуючого пристрою та його сенсора
                     if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData);
                     await api(`/api/task1/devices/${dId}`, 'PUT', deviceData);
                 }
@@ -305,6 +307,13 @@
         async function loadComps() {
             try {
                 const comps = await api('/api/task2/competitions');
+                
+                // ЗАХИСТ: Якщо CORS заблокував запит або сервер пустий
+                if (!comps || !Array.isArray(comps)) {
+                    document.getElementById('comps-container').innerHTML = '<span class="error-text">Немає доступу до бази даних.</span>';
+                    return;
+                }
+
                 let html = '';
                 for (const c of comps) {
                     let best = 'Немає виступів';
@@ -326,7 +335,6 @@
                     
                     if (c.performances) {
                         for (const p of c.performances) {
-                            // ФІКС: Безпечне читання учасника
                             const fName = p.Participant?.firstName ?? 'Н/Д';
                             const lName = p.Participant?.lastName ?? 'Н/Д';
 
@@ -342,7 +350,9 @@
                     html += `</ul></div>`;
                 }
                 document.getElementById('comps-container').innerHTML = html || 'Немає змагань.';
-            } catch (e) { alert(e); }
+            } catch (e) { 
+                document.getElementById('comps-container').innerHTML = `<span class="error-text">Помилка: ${e.message}</span>`;
+            }
         }
 
         function openCompModal(id = '', name = '') {
@@ -371,7 +381,6 @@
         function openPerfModal(compId, perf = null) {
             document.getElementById('perfCompId').value = compId;
             
-            // ФІКС: Безпечне заповнення форми
             document.getElementById('perfId').value = perf?.id || '';
             document.getElementById('partId').value = perf?.ParticipantId || '';
             document.getElementById('partFirst').value = perf?.Participant?.firstName ?? '';
@@ -414,7 +423,7 @@
                 }
                 document.getElementById('perfModal').close();
                 loadComps();
-            } catch (err) { alert(err); } // Покаже помилку валідації
+            } catch (err) { alert(err); } 
         }
 
         async function deletePerf(id) {
