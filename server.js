@@ -3,7 +3,12 @@ const cors = require('cors');
 const { Sequelize, DataTypes } = require('sequelize');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: '*', // Дозволити запити з БУДЬ-ЯКОГО сайту (зокрема з localhost)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Дозволити всі методи
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 app.use(express.static('public'));
