@@ -230,8 +230,42 @@
         function openChannelModal(id = '', name = '') { document.getElementById('channelId').value = id; document.getElementById('channelName').value = name; document.getElementById('channelModalTitle').innerText = id ? 'Редагувати Канал' : 'Новий Канал'; document.getElementById('channelModal').showModal(); }
         async function saveChannel(e) { e.preventDefault(); const id = document.getElementById('channelId').value; const body = { name: document.getElementById('channelName').value }; try { if (id) await api(`/api/task1/channels/${id}`, 'PUT', body); else await api('/api/task1/channels', 'POST', body); document.getElementById('channelModal').close(); syncData(); } catch (err) { alert(err); } }
         async function deleteChannel(id) { if(confirm('Видалити канал?')) { await api(`/api/task1/channels/${id}`, 'DELETE'); syncData(); } }
-        function openDeviceModal(channelId, device = null) { document.getElementById('deviceChannelId').value = channelId; document.getElementById('deviceId').value = device?.id || ''; document.getElementById('sensorId').value = device?.SensorId || ''; document.getElementById('devLoc').value = device?.locationNumber || ''; document.getElementById('devDate').value = device?.calibrationDate || ''; document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0'; document.getElementById('sensMin').value = device?.Sensor?.minRange ?? ''; document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? ''; document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? ''; document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій'; document.getElementById('deviceModal').showModal(); }
-        async function saveDevice(e) { e.preventDefault(); const cId = document.getElementById('deviceChannelId').value; const dId = document.getElementById('deviceId').value; const sId = document.getElementById('sensorId').value; const sensorData = { magnitudeType: parseInt(document.getElementById('sensType').value), minRange: parseFloat(document.getElementById('sensMin').value), maxRange: parseFloat(document.getElementById('sensMax').value), currentValue: parseFloat(document.getElementById('sensCur').value) }; const deviceData = { ChannelId: cId, locationNumber: parseInt(document.getElementById('devLoc').value), calibrationDate: document.getElementById('devDate').value }; try { if (!dId) { const sensor = await api('/api/task1/sensors', 'POST', sensorData); deviceData.SensorId = sensor.id; await api('/api/task1/devices', 'POST', deviceData); } else { if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData); await api(`/api/task1/devices/${dId}`, 'PUT', deviceData); } document.getElementById('deviceModal').close(); syncData(); } catch (err) { alert(err); } }
+        function openDeviceModal(channelId, device = null) {
+            document.getElementById('deviceChannelId').value = channelId;
+            
+            document.getElementById('deviceId').value = device?.id || '';
+            document.getElementById('sensorId').value = device?.SensorId || '';
+            document.getElementById('devLoc').value = device?.locationNumber || '';
+            document.getElementById('devDate').value = device?.calibrationDate || '';
+            
+            // ДОДАНО: Обмеження календаря для дати калібрування (не можна майбутнє)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('devDate').max = today;
+            
+            document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0';
+            document.getElementById('sensMin').value = device?.Sensor?.minRange ?? '';
+            document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? '';
+            document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? '';
+
+            document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій';
+            document.getElementById('deviceModal').showModal();
+        }
+        const Device = sequelize.define('Device', {
+            locationNumber: { 
+                type: DataTypes.INTEGER, 
+                allowNull: false,
+                validate: { min: { args: [1], msg: "Номер місця має бути додатнім (більше 0)." } }
+            },
+            calibrationDate: { 
+                type: DataTypes.DATEONLY, 
+                allowNull: false,
+                validate: {
+                    notFuture(value) {
+                        if (new Date(value) > new Date()) throw new Error("Дата калібрування не може бути в майбутньому.");
+                    }
+                }
+            }
+            });
         async function deleteDevice(id) { if(confirm('Видалити пристрій?')) { await api(`/api/task1/devices/${id}`, 'DELETE'); syncData(); } }
 
         // ================= TASK 2 =================
