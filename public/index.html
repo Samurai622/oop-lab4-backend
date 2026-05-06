@@ -290,8 +290,62 @@
         function openCompModal(id = '', name = '') { document.getElementById('compId').value = id; document.getElementById('compName').value = name; document.getElementById('compModalTitle').innerText = id ? 'Редагувати' : 'Нове'; document.getElementById('compModal').showModal(); }
         async function saveComp(e) { e.preventDefault(); const id = document.getElementById('compId').value; const body = { name: document.getElementById('compName').value }; try { if (id) await api(`/api/task2/competitions/${id}`, 'PUT', body); else await api('/api/task2/competitions', 'POST', body); document.getElementById('compModal').close(); syncData(); } catch (err) { alert(err); } }
         async function deleteComp(id) { if(confirm('Видалити змагання?')) { await api(`/api/task2/competitions/${id}`, 'DELETE'); syncData(); } }
-        function openPerfModal(compId, perf = null) { document.getElementById('perfCompId').value = compId; document.getElementById('perfId').value = perf?.id || ''; document.getElementById('partId').value = perf?.ParticipantId || ''; document.getElementById('partFirst').value = perf?.Participant?.firstName ?? ''; document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; document.getElementById('perfTeam').checked = perf?.isTeam ?? false; document.getElementById('perfScore').value = perf?.resultScore ?? ''; document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; document.getElementById('perfModal').showModal(); }
-        async function savePerf(e) { e.preventDefault(); const cId = document.getElementById('perfCompId').value; const pId = document.getElementById('perfId').value; const partId = document.getElementById('partId').value; const partData = { firstName: document.getElementById('partFirst').value, lastName: document.getElementById('partLast').value, birthDate: document.getElementById('partDate').value }; const perfData = { CompetitionId: cId, isTeam: document.getElementById('perfTeam').checked, resultScore: parseFloat(document.getElementById('perfScore').value) }; try { if (!pId) { const part = await api('/api/task2/participants', 'POST', partData); perfData.ParticipantId = part.id; await api('/api/task2/performances', 'POST', perfData); } else { await api(`/api/task2/participants/${partId}`, 'PUT', partData); await api(`/api/task2/performances/${pId}`, 'PUT', perfData); } document.getElementById('perfModal').close(); syncData(); } catch (err) { alert(err); } }
+        function openPerfModal(compId, perf = null) { 
+            document.getElementById('perfCompId').value = compId; 
+            document.getElementById('perfId').value = perf?.id || ''; 
+            document.getElementById('partId').value = perf?.ParticipantId || ''; 
+            document.getElementById('partFirst').value = perf?.Participant?.firstName ?? ''; 
+            document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; 
+            document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; 
+            
+            // ДОДАНО: Обмеження календаря (забороняємо майбутнє)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('partDate').max = today;
+
+            document.getElementById('perfTeam').checked = perf?.isTeam ?? false; 
+            document.getElementById('perfScore').value = perf?.resultScore ?? ''; 
+            document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; 
+            document.getElementById('perfModal').showModal(); 
+        }   
+        async function savePerf(e) { 
+            e.preventDefault(); 
+            const cId = document.getElementById('perfCompId').value; 
+            const pId = document.getElementById('perfId').value; 
+            const partId = document.getElementById('partId').value; 
+            
+            const partData = { 
+                firstName: document.getElementById('partFirst').value, 
+                lastName: document.getElementById('partLast').value, 
+                birthDate: document.getElementById('partDate').value 
+            }; 
+
+            const perfData = { 
+                CompetitionId: cId, 
+                isTeam: document.getElementById('perfTeam').checked, 
+                resultScore: parseFloat(document.getElementById('perfScore').value) 
+            }; 
+
+            try { 
+                // ДОДАНО: Клієнтська валідація дати
+                const selectedDate = new Date(partData.birthDate);
+                const currentDate = new Date();
+                if (selectedDate > currentDate) {
+                    alert("Дата народження не може бути в майбутньому!");
+                    return; // Зупиняємо збереження
+                }
+
+                if (!pId) { 
+                    const part = await api('/api/task2/participants', 'POST', partData); 
+                    perfData.ParticipantId = part.id; 
+                    await api('/api/task2/performances', 'POST', perfData); 
+                } else { 
+                    await api(`/api/task2/participants/${partId}`, 'PUT', partData); 
+                    await api(`/api/task2/performances/${pId}`, 'PUT', perfData); 
+                } 
+                document.getElementById('perfModal').close(); 
+                syncData(); 
+            } catch (err) { alert(err); } 
+        }
         async function deletePerf(id) { if(confirm('Видалити виступ?')) { await api(`/api/task2/performances/${id}`, 'DELETE'); syncData(); } }
 
         // Запуск при завантаженні сторінки
