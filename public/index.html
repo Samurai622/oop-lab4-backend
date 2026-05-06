@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web версія - Лабораторна №4</title>
+    <style>
+        :root { --bg: #1e1e1e; --card-bg: #2d2d30; --primary: #007ACC; --danger: #FF5555; --text: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        
+        /* Layout */
+        .container { max-width: 1000px; margin: auto; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #444; padding-bottom: 10px; }
+        .tab-btn { background: transparent; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 16px; border-radius: 5px; }
+        .tab-btn.active { background: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Cards & Lists */
+        .card { background: var(--card-bg); padding: 15px; margin-bottom: 15px; border-radius: 8px; position: relative; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; }
+        .item-list { list-style: none; padding: 0; margin: 0; }
+        .item-list li { background: #3e3e42; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;}
+        
+        /* Buttons */
+        button { cursor: pointer; padding: 5px 10px; border: none; border-radius: 4px; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: #4CAF50; }
+        .actions { display: flex; gap: 5px; }
+
+        /* Modals (Forms) */
+        dialog { background: var(--card-bg); color: var(--text); border: 1px solid #555; border-radius: 8px; padding: 20px; width: 400px; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; background: #1e1e1e; border: 1px solid #555; color: white; border-radius: 4px; }
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Web Dashboard - ООП Лабораторна 4</h2>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('task1')">Завдання 1 (Канали)</button>
+            <button class="tab-btn" onclick="switchTab('task2')">Завдання 2 (Змагання)</button>
+        </div>
+
+        <!-- ================= TASK 1 ================= -->
+        <div id="task1" class="tab-content active">
+            <button class="btn-success" onclick="openChannelModal()" style="margin-bottom: 15px;">➕ Створити Канал</button>
+            <div id="channels-container">Завантаження...</div>
+        </div>
+
+        <!-- ================= TASK 2 ================= -->
+        <div id="task2" class="tab-content">
+            <button class="btn-success" onclick="openCompModal()" style="margin-bottom: 15px;">➕ Створити Змагання</button>
+            <div id="comps-container">Завантаження...</div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНІ ВІКНА ДЛЯ ФОРМ -->
+    
+    <dialog id="channelModal">
+        <form onsubmit="saveChannel(event)">
+            <h3 id="channelModalTitle">Канал</h3>
+            <input type="hidden" id="channelId">
+            <div class="form-group"><label>Назва каналу:</label><input type="text" id="channelName" required></div>
+            <div class="form-actions">
+                <button type="button" class="btn-danger" onclick="document.getElementById('channelModal').close()">Скасувати</button>
+                <button type="submit" class="btn-success">Зберегти</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="deviceModal">
+        <form onsubmit="saveDevice(event)">
+            <h3 id="deviceModalTitle">Пристрій</h3>
+            <input type="hidden" id="deviceChannelId">
+            <input type="hidden" id="deviceId">
+            <input type="hidden" id="sensorId">
+            <div class="form-group"><label>Номер місця:</label><input type="number" id="devLoc" required></div>
+            <div class="form-group"><label>Дата калібрування:</label><input type="date" id="devDate" required></div>
+            
+            <h4>Сенсор</h4>
+            <div class="form-group">
+                <label>Тип (0-мм, 1-кут, 2-темп, 3-сек, 4-%):</label>
+                <select id="sensType"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+            </div>
+            <div class="form-group"><label>Мін:</label><input type="number" step="0.1" id="sensMin" required></div>
+            <div class="form-group"><label>Макс:</label><input type="number" step="0.1" id="sensMax" required></div>
+            <div class="form-group"><label>Поточне:</label><input type="number" step="0.1" id="sensCur" required></div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-danger" onclick="document.getElementById('deviceModal').close()">Скасувати</button>
+                <button type="submit" class="btn-success">Зберегти</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="compModal">
+        <form onsubmit="saveComp(event)">
+            <h3 id="compModalTitle">Змагання</h3>
+            <input type="hidden" id="compId">
+            <div class="form-group"><label>Назва змагання:</label><input type="text" id="compName" required></div>
+            <div class="form-actions">
+                <button type="button" class="btn-danger" onclick="document.getElementById('compModal').close()">Скасувати</button>
+                <button type="submit" class="btn-success">Зберегти</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="perfModal">
+        <form onsubmit="savePerf(event)">
+            <h3 id="perfModalTitle">Виступ</h3>
+            <input type="hidden" id="perfCompId">
+            <input type="hidden" id="perfId">
+            <input type="hidden" id="partId">
+            <div class="form-group"><label>Ім'я:</label><input type="text" id="partFirst" required></div>
+            <div class="form-group"><label>Прізвище:</label><input type="text" id="partLast" required></div>
+            <div class="form-group"><label>Дата народження:</label><input type="date" id="partDate" required></div>
+            <div class="form-group"><label>Командний?</label><input type="checkbox" id="perfTeam"></div>
+            <div class="form-group"><label>Бали:</label><input type="number" step="0.1" id="perfScore" required></div>
+            <div class="form-actions">
+                <button type="button" class="btn-danger" onclick="document.getElementById('perfModal').close()">Скасувати</button>
+                <button type="submit" class="btn-success">Зберегти</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script>
+        // --- УТИЛІТА ДЛЯ API ЗАПИТІВ ---
+        async function api(url, method = 'GET', body = null) {
+            const options = { method, headers: {} };
+            if (body) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
+            const res = await fetch(url, options);
+            
+            // Якщо сервер Node.js повернув помилку (наприклад, валідації)
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Невідома помилка сервера");
+            }
+            return res.json();
+        }
+
+        // Вкладки
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            if(tabId === 'task1') loadChannels();
+            if(tabId === 'task2') loadComps();
+        }
+
+        // ================= TASK 1 ЛОГІКА =================
+        async function loadChannels() {
+            try {
+                const channels = await api('/api/task1/channels');
+                let html = '';
+                let order = 1;
+                for (const ch of channels) {
+                    html += `<div class="card">
+                        <div class="card-header">
+                            <strong>Канал №${order} (${ch.name})</strong>
+                            <div class="actions">
+                                <button class="btn-primary" onclick="openChannelModal(${ch.id}, '${ch.name}')">Редаг.</button>
+                                <button class="btn-danger" onclick="deleteChannel(${ch.id})">Видалити</button>
+                                <button class="btn-success" onclick="openDeviceModal(${ch.id})">+ Пристрій</button>
+                            </div>
+                        </div>
+                        <ul class="item-list">`;
+                    
+                    const fullCh = await api(`/api/task1/channels/${ch.id}`);
+                    if (fullCh.devices) {
+                        for (const d of fullCh.devices) {
+                            // ФІКС: Безпечне читання через Optional Chaining (?.)
+                            const magType = d.Sensor?.magnitudeType ?? 'Н/Д';
+                            const curVal = d.Sensor?.currentValue ?? 'Н/Д';
+
+                            html += `<li>
+                                <span>Місце: ${d.locationNumber} | Тип датчика: ${magType} | Поточне: <b>${curVal}</b></span>
+                                <div class="actions">
+                                    <button class="btn-primary" onclick='openDeviceModal(${ch.id}, ${JSON.stringify(d)})'>Редаг.</button>
+                                    <button class="btn-danger" onclick="deleteDevice(${d.id})">Видал.</button>
+                                </div>
+                            </li>`;
+                        }
+                    }
+                    html += `</ul></div>`;
+                    order++;
+                }
+                document.getElementById('channels-container').innerHTML = html || 'Немає каналів.';
+            } catch (e) { alert(e); }
+        }
+
+        function openChannelModal(id = '', name = '') {
+            document.getElementById('channelId').value = id;
+            document.getElementById('channelName').value = name;
+            document.getElementById('channelModalTitle').innerText = id ? 'Редагувати Канал' : 'Новий Канал';
+            document.getElementById('channelModal').showModal();
+        }
+
+        async function saveChannel(e) {
+            e.preventDefault();
+            const id = document.getElementById('channelId').value;
+            const body = { name: document.getElementById('channelName').value };
+            try {
+                if (id) await api(`/api/task1/channels/${id}`, 'PUT', body);
+                else await api('/api/task1/channels', 'POST', body);
+                document.getElementById('channelModal').close();
+                loadChannels();
+            } catch (err) { alert(err); } // Покаже помилку валідації від Node.js
+        }
+
+        async function deleteChannel(id) {
+            if(confirm('Видалити канал?')) { await api(`/api/task1/channels/${id}`, 'DELETE'); loadChannels(); }
+        }
+
+        function openDeviceModal(channelId, device = null) {
+            document.getElementById('deviceChannelId').value = channelId;
+            
+            // ФІКС: Безпечне заповнення форми
+            document.getElementById('deviceId').value = device?.id || '';
+            document.getElementById('sensorId').value = device?.SensorId || '';
+            document.getElementById('devLoc').value = device?.locationNumber || '';
+            document.getElementById('devDate').value = device?.calibrationDate || '';
+            
+            document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0';
+            document.getElementById('sensMin').value = device?.Sensor?.minRange ?? '';
+            document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? '';
+            document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? '';
+
+            document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій';
+            document.getElementById('deviceModal').showModal();
+        }
+
+        async function saveDevice(e) {
+            e.preventDefault();
+            const cId = document.getElementById('deviceChannelId').value;
+            const dId = document.getElementById('deviceId').value;
+            const sId = document.getElementById('sensorId').value; // Отримуємо ID сенсора
+            
+            const sensorData = {
+                magnitudeType: parseInt(document.getElementById('sensType').value),
+                minRange: parseFloat(document.getElementById('sensMin').value),
+                maxRange: parseFloat(document.getElementById('sensMax').value),
+                currentValue: parseFloat(document.getElementById('sensCur').value)
+            };
+
+            const deviceData = {
+                ChannelId: cId,
+                locationNumber: parseInt(document.getElementById('devLoc').value),
+                calibrationDate: document.getElementById('devDate').value
+            };
+
+            try {
+                if (!dId) {
+                    // Створення нового пристрою
+                    const sensor = await api('/api/task1/sensors', 'POST', sensorData);
+                    deviceData.SensorId = sensor.id;
+                    await api('/api/task1/devices', 'POST', deviceData);
+                } else {
+                    // ФІКС: Оновлення існуючого пристрою та його сенсора
+                    if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData);
+                    await api(`/api/task1/devices/${dId}`, 'PUT', deviceData);
+                }
+                document.getElementById('deviceModal').close();
+                loadChannels();
+            } catch (err) { alert(err); } 
+        }
+
+        async function deleteDevice(id) {
+            if(confirm('Видалити пристрій?')) { await api(`/api/task1/devices/${id}`, 'DELETE'); loadChannels(); }
+        }
+
+        // ================= TASK 2 ЛОГІКА =================
+        async function loadComps() {
+            try {
+                const comps = await api('/api/task2/competitions');
+                let html = '';
+                for (const c of comps) {
+                    let best = 'Немає виступів';
+                    if (c.performances && c.performances.length > 0) {
+                        const topPerf = c.performances.reduce((p, current) => p.resultScore > current.resultScore ? p : current);
+                        best = topPerf.Participant?.lastName ?? 'Невідомо';
+                    }
+
+                    html += `<div class="card">
+                        <div class="card-header">
+                            <strong>${c.name} | Переможець: ${best}</strong>
+                            <div class="actions">
+                                <button class="btn-primary" onclick="openCompModal(${c.id}, '${c.name}')">Редаг.</button>
+                                <button class="btn-danger" onclick="deleteComp(${c.id})">Видалити</button>
+                                <button class="btn-success" onclick="openPerfModal(${c.id})">+ Виступ</button>
+                            </div>
+                        </div>
+                        <ul class="item-list">`;
+                    
+                    if (c.performances) {
+                        for (const p of c.performances) {
+                            // ФІКС: Безпечне читання учасника
+                            const fName = p.Participant?.firstName ?? 'Н/Д';
+                            const lName = p.Participant?.lastName ?? 'Н/Д';
+
+                            html += `<li>
+                                <span>Учасник: ${fName} ${lName} | Командний: ${p.isTeam} | Бали: <b>${p.resultScore}</b></span>
+                                <div class="actions">
+                                    <button class="btn-primary" onclick='openPerfModal(${c.id}, ${JSON.stringify(p)})'>Редаг.</button>
+                                    <button class="btn-danger" onclick="deletePerf(${p.id})">Видал.</button>
+                                </div>
+                            </li>`;
+                        }
+                    }
+                    html += `</ul></div>`;
+                }
+                document.getElementById('comps-container').innerHTML = html || 'Немає змагань.';
+            } catch (e) { alert(e); }
+        }
+
+        function openCompModal(id = '', name = '') {
+            document.getElementById('compId').value = id;
+            document.getElementById('compName').value = name;
+            document.getElementById('compModalTitle').innerText = id ? 'Редагувати' : 'Нове';
+            document.getElementById('compModal').showModal();
+        }
+
+        async function saveComp(e) {
+            e.preventDefault();
+            const id = document.getElementById('compId').value;
+            const body = { name: document.getElementById('compName').value };
+            try {
+                if (id) await api(`/api/task2/competitions/${id}`, 'PUT', body);
+                else await api('/api/task2/competitions', 'POST', body);
+                document.getElementById('compModal').close();
+                loadComps();
+            } catch (err) { alert(err); }
+        }
+
+        async function deleteComp(id) {
+            if(confirm('Видалити змагання?')) { await api(`/api/task2/competitions/${id}`, 'DELETE'); loadComps(); }
+        }
+
+        function openPerfModal(compId, perf = null) {
+            document.getElementById('perfCompId').value = compId;
+            
+            // ФІКС: Безпечне заповнення форми
+            document.getElementById('perfId').value = perf?.id || '';
+            document.getElementById('partId').value = perf?.ParticipantId || '';
+            document.getElementById('partFirst').value = perf?.Participant?.firstName ?? '';
+            document.getElementById('partLast').value = perf?.Participant?.lastName ?? '';
+            document.getElementById('partDate').value = perf?.Participant?.birthDate ?? '';
+            
+            document.getElementById('perfTeam').checked = perf?.isTeam ?? false;
+            document.getElementById('perfScore').value = perf?.resultScore ?? '';
+
+            document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ';
+            document.getElementById('perfModal').showModal();
+        }
+
+        async function savePerf(e) {
+            e.preventDefault();
+            const cId = document.getElementById('perfCompId').value;
+            const pId = document.getElementById('perfId').value;
+            const partId = document.getElementById('partId').value;
+            
+            const partData = {
+                firstName: document.getElementById('partFirst').value,
+                lastName: document.getElementById('partLast').value,
+                birthDate: document.getElementById('partDate').value
+            };
+
+            const perfData = {
+                CompetitionId: cId,
+                isTeam: document.getElementById('perfTeam').checked,
+                resultScore: parseFloat(document.getElementById('perfScore').value)
+            };
+
+            try {
+                if (!pId) {
+                    const part = await api('/api/task2/participants', 'POST', partData);
+                    perfData.ParticipantId = part.id;
+                    await api('/api/task2/performances', 'POST', perfData);
+                } else {
+                    await api(`/api/task2/participants/${partId}`, 'PUT', partData);
+                    await api(`/api/task2/performances/${pId}`, 'PUT', perfData);
+                }
+                document.getElementById('perfModal').close();
+                loadComps();
+            } catch (err) { alert(err); } // Покаже помилку валідації
+        }
+
+        async function deletePerf(id) {
+            if(confirm('Видалити виступ?')) { await api(`/api/task2/performances/${id}`, 'DELETE'); loadComps(); }
+        }
+
+        // Запуск
+        loadChannels();
+    </script>
+</body>
+</html>
