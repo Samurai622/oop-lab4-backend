@@ -46,6 +46,15 @@
             <button class="tab-btn active" onclick="switchTab('task1')">Завдання 1 (Канали)</button>
             <button class="tab-btn" onclick="switchTab('task2')">Завдання 2 (Змагання)</button>
         </div>
+        <!-- ДОДАНО: Перемикач баз даних -->
+        <div style="background: #333; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #FF9800;">Підключення до API:</strong>
+            <select id="envSelect" onchange="changeEnv()" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
+                <option value="">Автоматично (Поточний сервер)</option>
+                <option value="http://localhost:3000">Локальна БД (localhost:3000)</option>
+                <option value="https://oop-lab4.onrender.com">Хмарна БД (Render)</option>
+            </select>
+        </div>
 
         <!-- ================= TASK 1 ================= -->
         <div id="task1" class="tab-content active">
@@ -132,16 +141,34 @@
     <script>
         // --- УТИЛІТА ДЛЯ API ЗАПИТІВ ---
         async function api(url, method = 'GET', body = null) {
+            // Глобальна змінна для адреси сервера
+        let baseUrl = '';
+
+        // Функція зміни сервера
+        function changeEnv() {
+            baseUrl = document.getElementById('envSelect').value;
+            // Перезавантажуємо поточну відкриту вкладку
+            if (document.getElementById('task1').classList.contains('active')) loadChannels();
+            else loadComps();
+        }
+
+        // --- ОНОВЛЕНА УТИЛІТА ДЛЯ API ЗАПИТІВ ---
+        async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
-            if (body) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
-            const res = await fetch(url, options);
+            if (body) { 
+                options.headers['Content-Type'] = 'application/json'; 
+                options.body = JSON.stringify(body); 
+            }
             
-            // Якщо сервер Node.js повернув помилку (наприклад, валідації)
+            // ДОДАНО: baseUrl перед url
+            const res = await fetch(baseUrl + url, options);
+            
             if (!res.ok) {
                 const errorData = await res.json();
                 throw new Error(errorData.error || "Невідома помилка сервера");
             }
             return res.json();
+        }
         }
 
         // Вкладки
