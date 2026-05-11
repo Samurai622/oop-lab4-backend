@@ -91,7 +91,7 @@
             <div class="form-group"><label>Номер місця:</label><input type="number" id="devLoc" required></div>
             <div class="form-group"><label>Дата калібрування:</label><input type="date" id="devDate" required></div>
             <h4>Сенсор</h4>
-            <div class="form-group"><label>Тип (0-мм, 1-кут, 2-темп, 3-сек, 4-%):</label><select id="sensType"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+            <div class="form-group"><label>Тип:</label><select id="sensType"><option value="0">мм</option><option value="1">градус (кут)</option><option value="2">градус (температура)</option><option value="3">секунда</option><option value="4">відсоток</option></select></div>
             <div class="form-group"><label>Мін:</label><input type="number" step="0.1" id="sensMin" required></div>
             <div class="form-group"><label>Макс:</label><input type="number" step="0.1" id="sensMax" required></div>
             <div class="form-group"><label>Поточне:</label><input type="number" step="0.1" id="sensCur" required></div>
@@ -137,9 +137,10 @@
 
         function changeEnv() {
             baseUrl = document.getElementById('envSelect').value;
-            syncData(); 
+            syncData(); // Автоматична синхронізація при зміні БД
         }
 
+        // ================= ЛОГІКА СИНХРОНІЗАЦІЇ ТА СТАТУСУ =================
         function showSyncMessage(text, isError = false) {
             const statusEl = document.getElementById('syncStatus');
             statusEl.textContent = text;
@@ -153,6 +154,7 @@
             else loadComps(true);
         }
 
+        // ================= API =================
         async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
             if (body) { 
@@ -205,10 +207,11 @@
                         const magnitudeName = ['мм', 'градус (кут)', 'градус (температура)', 'секунда', 'відсоток'];
 
                         for (const d of fullCh.devices) {
-                            const magType = 'Н/Д';
+                            // ФІКС ПОМИЛКИ: Використовуємо let замість const
+                            let magType = 'Н/Д';
 
                             if(d.Sensor && d.Sensor.magnitudeType !== null) {
-                                magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;;
+                                magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;
                             }
 
                             const curVal = d.Sensor?.currentValue ?? 'Н/Д';
@@ -275,7 +278,7 @@
             }; 
 
             try { 
-                // ДОДАНО: Валідація дати калібрування перед збереженням
+                // Валідація дати калібрування перед збереженням
                 const selectedDate = new Date(deviceData.calibrationDate);
                 const currentDate = new Date();
                 if (selectedDate > currentDate) {
