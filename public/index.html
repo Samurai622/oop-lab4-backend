@@ -135,6 +135,18 @@
     <script>
         let baseUrl = '';
 
+         function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString().replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag]));
+        }
+
         function changeEnv() {
             baseUrl = document.getElementById('envSelect').value;
             syncData(); // Автоматична синхронізація при зміні БД
@@ -193,9 +205,9 @@
                 for (const ch of channels) {
                     html += `<div class="card">
                         <div class="card-header">
-                            <strong>Канал №${order} (${ch.name})</strong>
+                            <strong>Канал №${order} (${escapeHTML(ch.name)})</strong>
                             <div class="actions">
-                                <button class="btn-primary" onclick="openChannelModal(${ch.id}, '${ch.name}')">Редаг.</button>
+                                <button class="btn-primary" onclick="openChannelModal(${ch.id}, '${escapeHTML(ch.name)}')">Редаг.</button>
                                 <button class="btn-danger" onclick="deleteChannel(${ch.id})">Видалити</button>
                                 <button class="btn-success" onclick="openDeviceModal(${ch.id})">+ Пристрій</button>
                             </div>
@@ -322,9 +334,9 @@
 
                     html += `<div class="card">
                         <div class="card-header">
-                            <strong>${c.name} | Переможець: ${best}</strong>
+                            <strong>${escapeHTML(c.name)} | Переможець: ${escapeHTML(best)}</strong>
                             <div class="actions">
-                                <button class="btn-primary" onclick="openCompModal(${c.id}, '${c.name}')">Редаг.</button>
+                                <button class="btn-primary" onclick="openCompModal(${c.id}, '${escapeHTML(c.name)}')">Редаг.</button>
                                 <button class="btn-danger" onclick="deleteComp(${c.id})">Видалити</button>
                                 <button class="btn-success" onclick="openPerfModal(${c.id})">+ Виступ</button>
                             </div>

@@ -2,14 +2,29 @@ const express = require('express');
 const cors = require('cors');
 const { Sequelize, DataTypes } = require('sequelize');
 
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+
 const app = express();
+
+app.use(helmet({
+    contentSecurityPolicy: false
+}));
+
 app.use(cors({
     origin: '*', // Дозволити запити з БУДЬ-ЯКОГО сайту (зокрема з localhost)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Дозволити всі методи
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 50,
+    message: { error: "Забагато запитів з цього IP, спробуйте пізніше." }
+});
+app.use('/api/', limiter);
+
+app.use(express.json({ limit: '10kb'}));
 
 app.use(express.static('public'));
 
@@ -20,6 +35,10 @@ function sendError(res, err) {
     let msg = err.message;
     if (err.name === 'SequelizeValidationError') {
         msg = err.errors.map(e => e.message).join('\n');
+    }
+    
+    if(err.name === 'SequelizeDatabaseError') {
+        msg = " Сервер відхилив запис через помилку в даних.";
     }
     res.status(400).json({ error: msg });
 }
@@ -308,6 +327,11 @@ app.delete('/api/task2/performances/:id', async (req, res) => {
         }
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.use((err, req, res, next) => {
+    console.error("Помилка на сервері:", err.message);
+    res.status(500).json({ error: "Внутрішня помилка сервера." });
 });
 
 const PORT = process.env.PORT || 3000;

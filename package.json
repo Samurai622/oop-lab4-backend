@@ -17,6 +17,8 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
+    "helmet": "^8.1.0",
     "sequelize": "^6.37.8",
     "sqlite3": "^6.0.1"
   }
