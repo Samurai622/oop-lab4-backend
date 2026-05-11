@@ -202,8 +202,15 @@
                     
                     const fullCh = await api(`/api/task1/channels/${ch.id}`);
                     if (fullCh.devices) {
+                        const magnitudeName = ['мм', 'градус (кут)', 'градус (температура)', 'секунда', 'відсоток'];
+
                         for (const d of fullCh.devices) {
-                            const magType = d.Sensor?.magnitudeType ?? 'Н/Д';
+                            const magType = 'Н/Д';
+
+                            if(d.Sensor && d.Sensor.magnitudeType !== null) {
+                                magType = magnitudeNames[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;;
+                            }
+                            
                             const curVal = d.Sensor?.currentValue ?? 'Н/Д';
                             html += `<li>
                                 <span>Місце: ${d.locationNumber} | Тип: ${magType} | Поточне: <b>${curVal}</b></span>
