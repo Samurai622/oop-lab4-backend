@@ -208,9 +208,9 @@
                             const magType = 'Н/Д';
 
                             if(d.Sensor && d.Sensor.magnitudeType !== null) {
-                                magType = magnitudeNames[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;;
+                                magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;;
                             }
-                            
+
                             const curVal = d.Sensor?.currentValue ?? 'Н/Д';
                             html += `<li>
                                 <span>Місце: ${d.locationNumber} | Тип: ${magType} | Поточне: <b>${curVal}</b></span>
