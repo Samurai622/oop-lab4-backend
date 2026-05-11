@@ -137,16 +137,14 @@
 
         function changeEnv() {
             baseUrl = document.getElementById('envSelect').value;
-            syncData(); // Автоматична синхронізація при зміні БД
+            syncData(); 
         }
 
-        // ================= ЛОГІКА СИНХРОНІЗАЦІЇ ТА СТАТУСУ =================
         function showSyncMessage(text, isError = false) {
             const statusEl = document.getElementById('syncStatus');
             statusEl.textContent = text;
             statusEl.style.color = isError ? '#FF5555' : '#4CAF50';
-            if (!isError && text === 'База даних пуста!') statusEl.style.color = '#FF9800'; // Жовтий для пустої
-            
+            if (!isError && text === 'База даних пуста!') statusEl.style.color = '#FF9800'; 
             setTimeout(() => statusEl.textContent = '', 3000);
         }
 
@@ -155,7 +153,6 @@
             else loadComps(true);
         }
 
-        // ================= API =================
         async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
             if (body) { 
@@ -230,42 +227,67 @@
         function openChannelModal(id = '', name = '') { document.getElementById('channelId').value = id; document.getElementById('channelName').value = name; document.getElementById('channelModalTitle').innerText = id ? 'Редагувати Канал' : 'Новий Канал'; document.getElementById('channelModal').showModal(); }
         async function saveChannel(e) { e.preventDefault(); const id = document.getElementById('channelId').value; const body = { name: document.getElementById('channelName').value }; try { if (id) await api(`/api/task1/channels/${id}`, 'PUT', body); else await api('/api/task1/channels', 'POST', body); document.getElementById('channelModal').close(); syncData(); } catch (err) { alert(err); } }
         async function deleteChannel(id) { if(confirm('Видалити канал?')) { await api(`/api/task1/channels/${id}`, 'DELETE'); syncData(); } }
-        function openDeviceModal(channelId, device = null) {
-            document.getElementById('deviceChannelId').value = channelId;
+        
+        function openDeviceModal(channelId, device = null) { 
+            document.getElementById('deviceChannelId').value = channelId; 
+            document.getElementById('deviceId').value = device?.id || ''; 
+            document.getElementById('sensorId').value = device?.SensorId || ''; 
+            document.getElementById('devLoc').value = device?.locationNumber || ''; 
+            document.getElementById('devDate').value = device?.calibrationDate || ''; 
             
-            document.getElementById('deviceId').value = device?.id || '';
-            document.getElementById('sensorId').value = device?.SensorId || '';
-            document.getElementById('devLoc').value = device?.locationNumber || '';
-            document.getElementById('devDate').value = device?.calibrationDate || '';
-            
-            // ДОДАНО: Обмеження календаря для дати калібрування (не можна майбутнє)
+            // Захист календаря: заборона майбутніх дат
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('devDate').max = today;
             
-            document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0';
-            document.getElementById('sensMin').value = device?.Sensor?.minRange ?? '';
-            document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? '';
-            document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? '';
+            document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0'; 
+            document.getElementById('sensMin').value = device?.Sensor?.minRange ?? ''; 
+            document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? ''; 
+            document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? ''; 
 
-            document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій';
-            document.getElementById('deviceModal').showModal();
+            document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій'; 
+            document.getElementById('deviceModal').showModal(); 
         }
-        const Device = sequelize.define('Device', {
-            locationNumber: { 
-                type: DataTypes.INTEGER, 
-                allowNull: false,
-                validate: { min: { args: [1], msg: "Номер місця має бути додатнім (більше 0)." } }
-            },
-            calibrationDate: { 
-                type: DataTypes.DATEONLY, 
-                allowNull: false,
-                validate: {
-                    notFuture(value) {
-                        if (new Date(value) > new Date()) throw new Error("Дата калібрування не може бути в майбутньому.");
-                    }
+        
+        async function saveDevice(e) { 
+            e.preventDefault(); 
+            const cId = document.getElementById('deviceChannelId').value; 
+            const dId = document.getElementById('deviceId').value; 
+            const sId = document.getElementById('sensorId').value; 
+            
+            const sensorData = { 
+                magnitudeType: parseInt(document.getElementById('sensType').value), 
+                minRange: parseFloat(document.getElementById('sensMin').value), 
+                maxRange: parseFloat(document.getElementById('sensMax').value), 
+                currentValue: parseFloat(document.getElementById('sensCur').value) 
+            }; 
+
+            const deviceData = { 
+                ChannelId: cId, 
+                locationNumber: parseInt(document.getElementById('devLoc').value), 
+                calibrationDate: document.getElementById('devDate').value 
+            }; 
+
+            try { 
+                // ДОДАНО: Валідація дати калібрування перед збереженням
+                const selectedDate = new Date(deviceData.calibrationDate);
+                const currentDate = new Date();
+                if (selectedDate > currentDate) {
+                    alert("Дата калібрування не може бути в майбутньому!");
+                    return; 
                 }
-            }
-            });
+
+                if (!dId) { 
+                    const sensor = await api('/api/task1/sensors', 'POST', sensorData); 
+                    deviceData.SensorId = sensor.id; 
+                    await api('/api/task1/devices', 'POST', deviceData); 
+                } else { 
+                    if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData); 
+                    await api(`/api/task1/devices/${dId}`, 'PUT', deviceData); 
+                } 
+                document.getElementById('deviceModal').close(); 
+                syncData(); 
+            } catch (err) { alert(err); } 
+        }
         async function deleteDevice(id) { if(confirm('Видалити пристрій?')) { await api(`/api/task1/devices/${id}`, 'DELETE'); syncData(); } }
 
         // ================= TASK 2 =================
@@ -324,6 +346,7 @@
         function openCompModal(id = '', name = '') { document.getElementById('compId').value = id; document.getElementById('compName').value = name; document.getElementById('compModalTitle').innerText = id ? 'Редагувати' : 'Нове'; document.getElementById('compModal').showModal(); }
         async function saveComp(e) { e.preventDefault(); const id = document.getElementById('compId').value; const body = { name: document.getElementById('compName').value }; try { if (id) await api(`/api/task2/competitions/${id}`, 'PUT', body); else await api('/api/task2/competitions', 'POST', body); document.getElementById('compModal').close(); syncData(); } catch (err) { alert(err); } }
         async function deleteComp(id) { if(confirm('Видалити змагання?')) { await api(`/api/task2/competitions/${id}`, 'DELETE'); syncData(); } }
+        
         function openPerfModal(compId, perf = null) { 
             document.getElementById('perfCompId').value = compId; 
             document.getElementById('perfId').value = perf?.id || ''; 
@@ -332,7 +355,7 @@
             document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; 
             document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; 
             
-            // ДОДАНО: Обмеження календаря (забороняємо майбутнє)
+            // Захист календаря: заборона майбутніх дат
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('partDate').max = today;
 
@@ -341,6 +364,7 @@
             document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; 
             document.getElementById('perfModal').showModal(); 
         }   
+        
         async function savePerf(e) { 
             e.preventDefault(); 
             const cId = document.getElementById('perfCompId').value; 
@@ -360,12 +384,12 @@
             }; 
 
             try { 
-                // ДОДАНО: Клієнтська валідація дати
+                // Валідація дати народження перед збереженням
                 const selectedDate = new Date(partData.birthDate);
                 const currentDate = new Date();
                 if (selectedDate > currentDate) {
                     alert("Дата народження не може бути в майбутньому!");
-                    return; // Зупиняємо збереження
+                    return; 
                 }
 
                 if (!pId) { 
