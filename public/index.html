@@ -40,14 +40,13 @@
             <button class="tab-btn" onclick="switchTab('task2')">Завдання 2 (Змагання)</button>
         </div>
         
-        <!-- ================= БЛОК УПРАВЛІННЯ ТА СИНХРОНІЗАЦІЇ ================= -->
         <div style="background: #333; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <strong style="color: #FF9800;">Підключення до API:</strong>
                 <select id="envSelect" onchange="changeEnv()" style="padding: 5px; background: #222; color: white; border: 1px solid #555; border-radius: 4px;">
                     <option value="">Автоматично (Поточний сервер)</option>
                     <option value="http://localhost:3000">Локальна БД (localhost:3000)</option>
-                    <option value="https://oop-lab4.onrender.com">Хмарна БД (Render)</option> <!-- ЗАМІНІТЬ НА ВАШ ДОМЕН -->
+                    <option value="https://oop-lab4.onrender.com">Хмарна БД (Render)</option>
                 </select>
             </div>
             <div style="display: flex; gap: 15px; align-items: center; border-top: 1px solid #555; padding-top: 15px;">
@@ -56,13 +55,11 @@
             </div>
         </div>
 
-        <!-- ================= TASK 1 ================= -->
         <div id="task1" class="tab-content active">
             <button class="btn-success" onclick="openChannelModal()" style="margin-bottom: 15px;">➕ Створити Канал</button>
             <div id="channels-container">Завантаження...</div>
         </div>
 
-        <!-- ================= TASK 2 ================= -->
         <div id="task2" class="tab-content">
             <button class="btn-success" onclick="openCompModal()" style="margin-bottom: 15px;">➕ Створити Змагання</button>
             <div id="comps-container">Завантаження...</div>
@@ -75,19 +72,14 @@
             <h3 id="channelModalTitle">Канал</h3>
             <input type="hidden" id="channelId">
             <div class="form-group"><label>Назва каналу:</label><input type="text" id="channelName" required></div>
-            <div class="form-actions">
-                <button type="button" class="btn-danger" onclick="document.getElementById('channelModal').close()">Скасувати</button>
-                <button type="submit" class="btn-success">Зберегти</button>
-            </div>
+            <div class="form-actions"><button type="button" class="btn-danger" onclick="document.getElementById('channelModal').close()">Скасувати</button><button type="submit" class="btn-success">Зберегти</button></div>
         </form>
     </dialog>
 
     <dialog id="deviceModal">
         <form onsubmit="saveDevice(event)">
             <h3 id="deviceModalTitle">Пристрій</h3>
-            <input type="hidden" id="deviceChannelId">
-            <input type="hidden" id="deviceId">
-            <input type="hidden" id="sensorId">
+            <input type="hidden" id="deviceChannelId"><input type="hidden" id="deviceId"><input type="hidden" id="sensorId">
             <div class="form-group"><label>Номер місця:</label><input type="number" id="devLoc" required></div>
             <div class="form-group"><label>Дата калібрування:</label><input type="date" id="devDate" required></div>
             <h4>Сенсор</h4>
@@ -95,10 +87,7 @@
             <div class="form-group"><label>Мін:</label><input type="number" step="0.1" id="sensMin" required></div>
             <div class="form-group"><label>Макс:</label><input type="number" step="0.1" id="sensMax" required></div>
             <div class="form-group"><label>Поточне:</label><input type="number" step="0.1" id="sensCur" required></div>
-            <div class="form-actions">
-                <button type="button" class="btn-danger" onclick="document.getElementById('deviceModal').close()">Скасувати</button>
-                <button type="submit" class="btn-success">Зберегти</button>
-            </div>
+            <div class="form-actions"><button type="button" class="btn-danger" onclick="document.getElementById('deviceModal').close()">Скасувати</button><button type="submit" class="btn-success">Зберегти</button></div>
         </form>
     </dialog>
 
@@ -107,52 +96,38 @@
             <h3 id="compModalTitle">Змагання</h3>
             <input type="hidden" id="compId">
             <div class="form-group"><label>Назва змагання:</label><input type="text" id="compName" required></div>
-            <div class="form-actions">
-                <button type="button" class="btn-danger" onclick="document.getElementById('compModal').close()">Скасувати</button>
-                <button type="submit" class="btn-success">Зберегти</button>
-            </div>
+            <div class="form-actions"><button type="button" class="btn-danger" onclick="document.getElementById('compModal').close()">Скасувати</button><button type="submit" class="btn-success">Зберегти</button></div>
         </form>
     </dialog>
 
     <dialog id="perfModal">
         <form onsubmit="savePerf(event)">
             <h3 id="perfModalTitle">Виступ</h3>
-            <input type="hidden" id="perfCompId">
-            <input type="hidden" id="perfId">
-            <input type="hidden" id="partId">
+            <input type="hidden" id="perfCompId"><input type="hidden" id="perfId"><input type="hidden" id="partId">
             <div class="form-group"><label>Ім'я:</label><input type="text" id="partFirst" required></div>
             <div class="form-group"><label>Прізвище:</label><input type="text" id="partLast" required></div>
             <div class="form-group"><label>Дата народження:</label><input type="date" id="partDate" required></div>
             <div class="form-group"><label>Командний?</label><input type="checkbox" id="perfTeam"></div>
             <div class="form-group"><label>Бали:</label><input type="number" step="0.1" id="perfScore" required></div>
-            <div class="form-actions">
-                <button type="button" class="btn-danger" onclick="document.getElementById('perfModal').close()">Скасувати</button>
-                <button type="submit" class="btn-success">Зберегти</button>
-            </div>
+            <div class="form-actions"><button type="button" class="btn-danger" onclick="document.getElementById('perfModal').close()">Скасувати</button><button type="submit" class="btn-success">Зберегти</button></div>
         </form>
     </dialog>
 
     <script>
         let baseUrl = '';
+        let adminPassword = '';
 
-         function escapeHTML(str) {
+        function escapeHTML(str) {
             if (!str) return '';
             return str.toString().replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag]));
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag]));
         }
 
         function changeEnv() {
             baseUrl = document.getElementById('envSelect').value;
-            syncData(); // Автоматична синхронізація при зміні БД
+            syncData(); 
         }
 
-        // ================= ЛОГІКА СИНХРОНІЗАЦІЇ ТА СТАТУСУ =================
         function showSyncMessage(text, isError = false) {
             const statusEl = document.getElementById('syncStatus');
             statusEl.textContent = text;
@@ -166,14 +141,32 @@
             else loadComps(true);
         }
 
-        // ================= API =================
         async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
+            
+            if (adminPassword) {
+                options.headers['x-admin-bypass'] = adminPassword;
+            }
+
             if (body) { 
                 options.headers['Content-Type'] = 'application/json'; 
                 options.body = JSON.stringify(body); 
             }
             const res = await fetch(baseUrl + url, options);
+            
+            if (res.status === 429) {
+                const errData = await res.json();
+                if (errData.requirePassword) {
+                    const userPwd = prompt("Система захисту: Забагато запитів!\\nВведіть пароль адміністратора для розблокування:");
+                    if (userPwd) {
+                        adminPassword = userPwd; 
+                        return api(url, method, body); 
+                    } else {
+                        throw new Error("Доступ заблоковано через підозру на DDoS.");
+                    }
+                }
+            }
+
             if (!res.ok) {
                 const errorData = await res.json();
                 throw new Error(errorData.error || "Невідома помилка сервера");
@@ -192,11 +185,7 @@
         async function loadChannels(isManualSync = false) {
             try {
                 const channels = await api('/api/task1/channels');
-                if (!channels || !Array.isArray(channels)) {
-                    document.getElementById('channels-container').innerHTML = '<span class="error-text">Немає доступу до бази даних.</span>';
-                    if (isManualSync) showSyncMessage('Помилка з\'єднання!', true);
-                    return;
-                }
+                if (!channels || !Array.isArray(channels)) return;
 
                 if (isManualSync) showSyncMessage(channels.length === 0 ? 'База даних пуста!' : 'Успішно синхронізовано!');
 
@@ -211,21 +200,14 @@
                                 <button class="btn-danger" onclick="deleteChannel(${ch.id})">Видалити</button>
                                 <button class="btn-success" onclick="openDeviceModal(${ch.id})">+ Пристрій</button>
                             </div>
-                        </div>
-                        <ul class="item-list">`;
+                        </div><ul class="item-list">`;
                     
                     const fullCh = await api(`/api/task1/channels/${ch.id}`);
                     if (fullCh.devices) {
                         const magnitudeName = ['мм', 'градус (кут)', 'градус (температура)', 'секунда', 'відсоток'];
-
                         for (const d of fullCh.devices) {
-                            // ФІКС ПОМИЛКИ: Використовуємо let замість const
                             let magType = 'Н/Д';
-
-                            if(d.Sensor && d.Sensor.magnitudeType !== null) {
-                                magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;
-                            }
-
+                            if(d.Sensor && d.Sensor.magnitudeType !== null) magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;
                             const curVal = d.Sensor?.currentValue ?? 'Н/Д';
                             html += `<li>
                                 <span>Місце: ${d.locationNumber} | Тип: ${magType} | Поточне: <b>${curVal}</b></span>
@@ -256,16 +238,12 @@
             document.getElementById('sensorId').value = device?.SensorId || ''; 
             document.getElementById('devLoc').value = device?.locationNumber || ''; 
             document.getElementById('devDate').value = device?.calibrationDate || ''; 
-            
-            // Захист календаря: заборона майбутніх дат
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('devDate').max = today;
-            
             document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0'; 
             document.getElementById('sensMin').value = device?.Sensor?.minRange ?? ''; 
             document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? ''; 
             document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? ''; 
-
             document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій'; 
             document.getElementById('deviceModal').showModal(); 
         }
@@ -275,39 +253,14 @@
             const cId = document.getElementById('deviceChannelId').value; 
             const dId = document.getElementById('deviceId').value; 
             const sId = document.getElementById('sensorId').value; 
-            
-            const sensorData = { 
-                magnitudeType: parseInt(document.getElementById('sensType').value), 
-                minRange: parseFloat(document.getElementById('sensMin').value), 
-                maxRange: parseFloat(document.getElementById('sensMax').value), 
-                currentValue: parseFloat(document.getElementById('sensCur').value) 
-            }; 
-
-            const deviceData = { 
-                ChannelId: cId, 
-                locationNumber: parseInt(document.getElementById('devLoc').value), 
-                calibrationDate: document.getElementById('devDate').value 
-            }; 
-
+            const sensorData = { magnitudeType: parseInt(document.getElementById('sensType').value), minRange: parseFloat(document.getElementById('sensMin').value), maxRange: parseFloat(document.getElementById('sensMax').value), currentValue: parseFloat(document.getElementById('sensCur').value) }; 
+            const deviceData = { ChannelId: cId, locationNumber: parseInt(document.getElementById('devLoc').value), calibrationDate: document.getElementById('devDate').value }; 
             try { 
-                // Валідація дати калібрування перед збереженням
                 const selectedDate = new Date(deviceData.calibrationDate);
-                const currentDate = new Date();
-                if (selectedDate > currentDate) {
-                    alert("Дата калібрування не може бути в майбутньому!");
-                    return; 
-                }
-
-                if (!dId) { 
-                    const sensor = await api('/api/task1/sensors', 'POST', sensorData); 
-                    deviceData.SensorId = sensor.id; 
-                    await api('/api/task1/devices', 'POST', deviceData); 
-                } else { 
-                    if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData); 
-                    await api(`/api/task1/devices/${dId}`, 'PUT', deviceData); 
-                } 
-                document.getElementById('deviceModal').close(); 
-                syncData(); 
+                if (selectedDate > new Date()) { alert("Дата калібрування не може бути в майбутньому!"); return; }
+                if (!dId) { const sensor = await api('/api/task1/sensors', 'POST', sensorData); deviceData.SensorId = sensor.id; await api('/api/task1/devices', 'POST', deviceData); } 
+                else { if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData); await api(`/api/task1/devices/${dId}`, 'PUT', deviceData); } 
+                document.getElementById('deviceModal').close(); syncData(); 
             } catch (err) { alert(err); } 
         }
         async function deleteDevice(id) { if(confirm('Видалити пристрій?')) { await api(`/api/task1/devices/${id}`, 'DELETE'); syncData(); } }
@@ -316,12 +269,7 @@
         async function loadComps(isManualSync = false) {
             try {
                 const comps = await api('/api/task2/competitions');
-                if (!comps || !Array.isArray(comps)) {
-                    document.getElementById('comps-container').innerHTML = '<span class="error-text">Немає доступу до бази даних.</span>';
-                    if (isManualSync) showSyncMessage('Помилка з\'єднання!', true);
-                    return;
-                }
-
+                if (!comps || !Array.isArray(comps)) return;
                 if (isManualSync) showSyncMessage(comps.length === 0 ? 'База даних пуста!' : 'Успішно синхронізовано!');
 
                 let html = '';
@@ -348,7 +296,7 @@
                             const fName = p.Participant?.firstName ?? 'Н/Д';
                             const lName = p.Participant?.lastName ?? 'Н/Д';
                             html += `<li>
-                                <span>Учасник: ${fName} ${lName} | Командний: ${p.isTeam} | Бали: <b>${p.resultScore}</b></span>
+                                <span>Учасник: ${escapeHTML(fName)} ${escapeHTML(lName)} | Командний: ${p.isTeam} | Бали: <b>${p.resultScore}</b></span>
                                 <div class="actions">
                                     <button class="btn-primary" onclick='openPerfModal(${c.id}, ${JSON.stringify(p)})'>Редаг.</button>
                                     <button class="btn-danger" onclick="deletePerf(${p.id})">Видал.</button>
@@ -370,65 +318,26 @@
         async function deleteComp(id) { if(confirm('Видалити змагання?')) { await api(`/api/task2/competitions/${id}`, 'DELETE'); syncData(); } }
         
         function openPerfModal(compId, perf = null) { 
-            document.getElementById('perfCompId').value = compId; 
-            document.getElementById('perfId').value = perf?.id || ''; 
-            document.getElementById('partId').value = perf?.ParticipantId || ''; 
-            document.getElementById('partFirst').value = perf?.Participant?.firstName ?? ''; 
-            document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; 
-            document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; 
-            
-            // Захист календаря: заборона майбутніх дат
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('partDate').max = today;
-
-            document.getElementById('perfTeam').checked = perf?.isTeam ?? false; 
-            document.getElementById('perfScore').value = perf?.resultScore ?? ''; 
-            document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; 
-            document.getElementById('perfModal').showModal(); 
+            document.getElementById('perfCompId').value = compId; document.getElementById('perfId').value = perf?.id || ''; document.getElementById('partId').value = perf?.ParticipantId || ''; document.getElementById('partFirst').value = perf?.Participant?.firstName ?? ''; document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; 
+            const today = new Date().toISOString().split('T')[0]; document.getElementById('partDate').max = today;
+            document.getElementById('perfTeam').checked = perf?.isTeam ?? false; document.getElementById('perfScore').value = perf?.resultScore ?? ''; document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; document.getElementById('perfModal').showModal(); 
         }   
         
         async function savePerf(e) { 
             e.preventDefault(); 
-            const cId = document.getElementById('perfCompId').value; 
-            const pId = document.getElementById('perfId').value; 
-            const partId = document.getElementById('partId').value; 
-            
-            const partData = { 
-                firstName: document.getElementById('partFirst').value, 
-                lastName: document.getElementById('partLast').value, 
-                birthDate: document.getElementById('partDate').value 
-            }; 
-
-            const perfData = { 
-                CompetitionId: cId, 
-                isTeam: document.getElementById('perfTeam').checked, 
-                resultScore: parseFloat(document.getElementById('perfScore').value) 
-            }; 
-
+            const cId = document.getElementById('perfCompId').value; const pId = document.getElementById('perfId').value; const partId = document.getElementById('partId').value; 
+            const partData = { firstName: document.getElementById('partFirst').value, lastName: document.getElementById('partLast').value, birthDate: document.getElementById('partDate').value }; 
+            const perfData = { CompetitionId: cId, isTeam: document.getElementById('perfTeam').checked, resultScore: parseFloat(document.getElementById('perfScore').value) }; 
             try { 
-                // Валідація дати народження перед збереженням
                 const selectedDate = new Date(partData.birthDate);
-                const currentDate = new Date();
-                if (selectedDate > currentDate) {
-                    alert("Дата народження не може бути в майбутньому!");
-                    return; 
-                }
-
-                if (!pId) { 
-                    const part = await api('/api/task2/participants', 'POST', partData); 
-                    perfData.ParticipantId = part.id; 
-                    await api('/api/task2/performances', 'POST', perfData); 
-                } else { 
-                    await api(`/api/task2/participants/${partId}`, 'PUT', partData); 
-                    await api(`/api/task2/performances/${pId}`, 'PUT', perfData); 
-                } 
-                document.getElementById('perfModal').close(); 
-                syncData(); 
+                if (selectedDate > new Date()) { alert("Дата народження не може бути в майбутньому!"); return; }
+                if (!pId) { const part = await api('/api/task2/participants', 'POST', partData); perfData.ParticipantId = part.id; await api('/api/task2/performances', 'POST', perfData); } 
+                else { await api(`/api/task2/participants/${partId}`, 'PUT', partData); await api(`/api/task2/performances/${pId}`, 'PUT', perfData); } 
+                document.getElementById('perfModal').close(); syncData(); 
             } catch (err) { alert(err); } 
         }
         async function deletePerf(id) { if(confirm('Видалити виступ?')) { await api(`/api/task2/performances/${id}`, 'DELETE'); syncData(); } }
 
-        // Запуск при завантаженні сторінки
         syncData();
     </script>
 </body>
