@@ -115,7 +115,8 @@
 
     <script>
         let baseUrl = '';
-
+        let isPrompting = false;
+        
         function escapeHTML(str) {
             if (!str) return '';
             return str.toString().replace(/[&<>'"]/g, 
@@ -143,6 +144,11 @@
         // ================= API З РОЗБЛОКУВАННЯМ =================
         async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
+            
+            if (adminPassword) {
+                options.headers['x-admin-bypass'] = adminPassword;
+            }
+
             if (body) { 
                 options.headers['Content-Type'] = 'application/json'; 
                 options.body = JSON.stringify(body); 
@@ -152,30 +158,56 @@
             
             if (res.status === 403) {
                 const errData = await res.json();
-                alert("🚨 БЛОКУВАННЯ:\n" + errData.error);
+                // Якщо це не фоновий спам-запит, показуємо помилку
+                if (!isPrompting) {
+                    alert("🚨 КРИТИЧНА ПОМИЛКА: " + errData.error);
+                }
                 throw new Error("BANNED");
             }
 
+            // ПЕРЕХОПЛЕННЯ 429
             if (res.status === 429) {
                 const errData = await res.json();
                 if (errData.requirePassword) {
+                    
+                    // Якщо віконце вже відкрито іншим запитом — просто вбиваємо цей запит
+                    if (isPrompting) {
+                        throw new Error("DDoS Blocked");
+                    }
+
+                    // Ставимо замок
+                    isPrompting = true;
+                    
                     const userPwd = prompt("🚨 Зафіксовано DDoS!\nВаш IP заблоковано. Введіть пароль для розблокування:");
+                    
                     if (userPwd) {
-                        const unlockRes = await fetch(baseUrl + '/api/unlock', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ password: userPwd })
-                        });
-                        const unlockData = await unlockRes.json();
-                        
-                        if (unlockRes.ok) {
-                            alert("✅ " + unlockData.message);
-                            return api(url, method, body); // Повторюємо запит
-                        } else {
-                            alert("❌ " + unlockData.error);
-                            throw new Error("Невірний пароль");
+                        try {
+                            const unlockRes = await fetch(baseUrl + '/api/unlock', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ password: userPwd })
+                            });
+                            
+                            const unlockData = await unlockRes.json();
+                            
+                            if (unlockRes.ok) {
+                                alert("✅ " + unlockData.message);
+                                adminPassword = userPwd; 
+                                isPrompting = false; // Знімаємо замок
+                                return api(url, method, body); // Повторюємо оригінальний запит
+                            } else {
+                                alert("❌ " + unlockData.error);
+                                isPrompting = false; // Знімаємо замок
+                                throw new Error("Невірний пароль");
+                            }
+                        } catch (e) {
+                            isPrompting = false;
+                            throw e;
                         }
-                    } else throw new Error("Розблокування скасовано.");
+                    } else {
+                        isPrompting = false; // Знімаємо замок, якщо користувач натиснув "Скасувати"
+                        throw new Error("Розблокування скасовано.");
+                    }
                 }
             }
 
