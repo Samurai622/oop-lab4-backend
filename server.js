@@ -1,45 +1,67 @@
 const express = require('express');
 const cors = require('cors');
 const { Sequelize, DataTypes } = require('sequelize');
-
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
 const app = express();
 
-app.use(helmet({
-    contentSecurityPolicy: false
-}));
-
-app.use(cors({
-    origin: '*', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-bypass'] // ДОДАНО x-admin-bypass
-}));
-
-// ==========================================
-// ЗАХИСТ ВІД DDOS З МОЖЛИВІСТЮ ПАРОЛЯ
-// ==========================================
-const limiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 хвилина блокування
-    max: 50, // Максимум 50 запитів
-    message: { 
-        error: "Зафіксовано DDoS атаку або спам запитами!",
-        requirePassword: true 
-    },
-    skip: (req) => {
-        // Якщо клієнт прикріпив правильний пароль — ігноруємо ліміт
-        if (req.headers['x-admin-bypass'] === 'super-secret-password-123') {
-            return true;
-        }
-        return false;
-    }
-});
-app.use('/api/', limiter);
-
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] }));
 app.use(express.json({ limit: '10kb'}));
 app.use(express.static('public'));
 
+// ==========================================
+// НОВА СИСТЕМА БЕЗПЕКИ (ТИМЧАСОВИЙ БАН ТА UNLOCK)
+// ==========================================
+const bannedIps = new Map(); 
+const failedAttempts = new Map(); 
+const BAN_DURATION_MS = 5 * 60 * 1000; // 5 хвилин
+
+app.use((req, res, next) => {
+    const banUntil = bannedIps.get(req.ip);
+    if (banUntil) {
+        if (Date.now() < banUntil) {
+            const timeLeftSec = Math.ceil((banUntil - Date.now()) / 1000);
+            return res.status(403).json({ error: `Ваш IP тимчасово заблоковано за підбір пароля!\nЗачекайте ще ${timeLeftSec} секунд.` });
+        } else {
+            bannedIps.delete(req.ip);
+            failedAttempts.delete(req.ip);
+        }
+    }
+    next();
+});
+
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000, 
+    max: 50, 
+    message: { error: "Зафіксовано DDoS атаку!", requirePassword: true }
+});
+
+app.post('/api/unlock', (req, res) => {
+    const { password } = req.body;
+    if (password === 'super-secret-password-123') {
+        limiter.resetKey(req.ip);
+        failedAttempts.delete(req.ip);
+        bannedIps.delete(req.ip); 
+        return res.json({ success: true, message: "Розблоковано! Ліміти обнулено." });
+    } else {
+        let attempts = (failedAttempts.get(req.ip) || 0) + 1;
+        failedAttempts.set(req.ip, attempts);
+        if (attempts >= 3) {
+            bannedIps.set(req.ip, Date.now() + BAN_DURATION_MS);
+            return res.status(403).json({ error: "Ви ввели невірний пароль 3 рази.\nВаш IP заблоковано на 5 хвилин!" });
+        }
+        return res.status(401).json({ error: `Невірний пароль! Залишилось спроб: ${3 - attempts}` });
+    }
+});
+
+app.use('/api/task1', limiter);
+app.use('/api/task2', limiter);
+
+// ==========================================
+// ФУНКЦІЯ ДЛЯ ПЕРЕХОПЛЕННЯ ПОМИЛОК ВАЛІДАЦІЇ
+// ==========================================
 function sendError(res, err) {
     let msg = err.message;
     if (err.name === 'SequelizeValidationError') msg = err.errors.map(e => e.message).join('\n');
@@ -47,11 +69,7 @@ function sendError(res, err) {
     res.status(400).json({ error: msg });
 }
 
-const sequelize = new Sequelize({
-   dialect: 'sqlite',
-   storage: process.env.DB_PATH || './database.sqlite', 
-   logging: false
-});
+const sequelize = new Sequelize({ dialect: 'sqlite', storage: process.env.DB_PATH || './database.sqlite', logging: false });
 
 const Sensor = sequelize.define('Sensor', {
    magnitudeType: { type: DataTypes.INTEGER, allowNull: false },

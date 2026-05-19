@@ -115,7 +115,6 @@
 
     <script>
         let baseUrl = '';
-        let adminPassword = '';
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -141,29 +140,42 @@
             else loadComps(true);
         }
 
+        // ================= API З РОЗБЛОКУВАННЯМ =================
         async function api(url, method = 'GET', body = null) {
             const options = { method, headers: {} };
-            
-            if (adminPassword) {
-                options.headers['x-admin-bypass'] = adminPassword;
-            }
-
             if (body) { 
                 options.headers['Content-Type'] = 'application/json'; 
                 options.body = JSON.stringify(body); 
             }
-            const res = await fetch(baseUrl + url, options);
             
+            let res = await fetch(baseUrl + url, options);
+            
+            if (res.status === 403) {
+                const errData = await res.json();
+                alert("🚨 БЛОКУВАННЯ:\n" + errData.error);
+                throw new Error("BANNED");
+            }
+
             if (res.status === 429) {
                 const errData = await res.json();
                 if (errData.requirePassword) {
-                    const userPwd = prompt("Система захисту: Забагато запитів!\\nВведіть пароль адміністратора для розблокування:");
+                    const userPwd = prompt("🚨 Зафіксовано DDoS!\nВаш IP заблоковано. Введіть пароль для розблокування:");
                     if (userPwd) {
-                        adminPassword = userPwd; 
-                        return api(url, method, body); 
-                    } else {
-                        throw new Error("Доступ заблоковано через підозру на DDoS.");
-                    }
+                        const unlockRes = await fetch(baseUrl + '/api/unlock', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: userPwd })
+                        });
+                        const unlockData = await unlockRes.json();
+                        
+                        if (unlockRes.ok) {
+                            alert("✅ " + unlockData.message);
+                            return api(url, method, body); // Повторюємо запит
+                        } else {
+                            alert("❌ " + unlockData.error);
+                            throw new Error("Невірний пароль");
+                        }
+                    } else throw new Error("Розблокування скасовано.");
                 }
             }
 
@@ -174,169 +186,61 @@
             return res.json();
         }
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.target.classList.add('active');
-            syncData();
-        }
+        function switchTab(tabId) { document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(tabId).classList.add('active'); event.target.classList.add('active'); syncData(); }
 
         // ================= TASK 1 =================
         async function loadChannels(isManualSync = false) {
             try {
                 const channels = await api('/api/task1/channels');
-                if (!channels || !Array.isArray(channels)) return;
-
+                if (!channels || !Array.isArray(channels)) { document.getElementById('channels-container').innerHTML = '<span class="error-text">Немає доступу до бази даних.</span>'; if (isManualSync) showSyncMessage('Помилка з\'єднання!', true); return; }
                 if (isManualSync) showSyncMessage(channels.length === 0 ? 'База даних пуста!' : 'Успішно синхронізовано!');
-
-                let html = '';
-                let order = 1;
+                let html = ''; let order = 1;
                 for (const ch of channels) {
-                    html += `<div class="card">
-                        <div class="card-header">
-                            <strong>Канал №${order} (${escapeHTML(ch.name)})</strong>
-                            <div class="actions">
-                                <button class="btn-primary" onclick="openChannelModal(${ch.id}, '${escapeHTML(ch.name)}')">Редаг.</button>
-                                <button class="btn-danger" onclick="deleteChannel(${ch.id})">Видалити</button>
-                                <button class="btn-success" onclick="openDeviceModal(${ch.id})">+ Пристрій</button>
-                            </div>
-                        </div><ul class="item-list">`;
-                    
+                    html += `<div class="card"><div class="card-header"><strong>Канал №${order} (${escapeHTML(ch.name)})</strong><div class="actions"><button class="btn-primary" onclick="openChannelModal(${ch.id}, '${escapeHTML(ch.name)}')">Редаг.</button><button class="btn-danger" onclick="deleteChannel(${ch.id})">Видалити</button><button class="btn-success" onclick="openDeviceModal(${ch.id})">+ Пристрій</button></div></div><ul class="item-list">`;
                     const fullCh = await api(`/api/task1/channels/${ch.id}`);
                     if (fullCh.devices) {
                         const magnitudeName = ['мм', 'градус (кут)', 'градус (температура)', 'секунда', 'відсоток'];
                         for (const d of fullCh.devices) {
-                            let magType = 'Н/Д';
-                            if(d.Sensor && d.Sensor.magnitudeType !== null) magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;
-                            const curVal = d.Sensor?.currentValue ?? 'Н/Д';
-                            html += `<li>
-                                <span>Місце: ${d.locationNumber} | Тип: ${magType} | Поточне: <b>${curVal}</b></span>
-                                <div class="actions">
-                                    <button class="btn-primary" onclick='openDeviceModal(${ch.id}, ${JSON.stringify(d)})'>Редаг.</button>
-                                    <button class="btn-danger" onclick="deleteDevice(${d.id})">Видал.</button>
-                                </div>
-                            </li>`;
+                            let magType = 'Н/Д'; if(d.Sensor && d.Sensor.magnitudeType !== null) magType = magnitudeName[d.Sensor.magnitudeType] || d.Sensor.magnitudeType;
+                            html += `<li><span>Місце: ${d.locationNumber} | Тип: ${magType} | Поточне: <b>${d.Sensor?.currentValue ?? 'Н/Д'}</b></span><div class="actions"><button class="btn-primary" onclick='openDeviceModal(${ch.id}, ${JSON.stringify(d)})'>Редаг.</button><button class="btn-danger" onclick="deleteDevice(${d.id})">Видал.</button></div></li>`;
                         }
                     }
-                    html += `</ul></div>`;
-                    order++;
+                    html += `</ul></div>`; order++;
                 }
                 document.getElementById('channels-container').innerHTML = html || 'Немає каналів.';
-            } catch (e) { 
-                document.getElementById('channels-container').innerHTML = `<span class="error-text">Помилка: ${e.message}</span>`;
-                if (isManualSync) showSyncMessage('Помилка з\'єднання!', true);
-            }
+            } catch (e) { if(e.message !== "BANNED" && e.message !== "Невірний пароль") document.getElementById('channels-container').innerHTML = `<span class="error-text">Помилка: ${e.message}</span>`; if (isManualSync) showSyncMessage('Помилка з\'єднання!', true); }
         }
 
         function openChannelModal(id = '', name = '') { document.getElementById('channelId').value = id; document.getElementById('channelName').value = name; document.getElementById('channelModalTitle').innerText = id ? 'Редагувати Канал' : 'Новий Канал'; document.getElementById('channelModal').showModal(); }
-        async function saveChannel(e) { e.preventDefault(); const id = document.getElementById('channelId').value; const body = { name: document.getElementById('channelName').value }; try { if (id) await api(`/api/task1/channels/${id}`, 'PUT', body); else await api('/api/task1/channels', 'POST', body); document.getElementById('channelModal').close(); syncData(); } catch (err) { alert(err); } }
-        async function deleteChannel(id) { if(confirm('Видалити канал?')) { await api(`/api/task1/channels/${id}`, 'DELETE'); syncData(); } }
-        
-        function openDeviceModal(channelId, device = null) { 
-            document.getElementById('deviceChannelId').value = channelId; 
-            document.getElementById('deviceId').value = device?.id || ''; 
-            document.getElementById('sensorId').value = device?.SensorId || ''; 
-            document.getElementById('devLoc').value = device?.locationNumber || ''; 
-            document.getElementById('devDate').value = device?.calibrationDate || ''; 
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('devDate').max = today;
-            document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0'; 
-            document.getElementById('sensMin').value = device?.Sensor?.minRange ?? ''; 
-            document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? ''; 
-            document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? ''; 
-            document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій'; 
-            document.getElementById('deviceModal').showModal(); 
-        }
-        
-        async function saveDevice(e) { 
-            e.preventDefault(); 
-            const cId = document.getElementById('deviceChannelId').value; 
-            const dId = document.getElementById('deviceId').value; 
-            const sId = document.getElementById('sensorId').value; 
-            const sensorData = { magnitudeType: parseInt(document.getElementById('sensType').value), minRange: parseFloat(document.getElementById('sensMin').value), maxRange: parseFloat(document.getElementById('sensMax').value), currentValue: parseFloat(document.getElementById('sensCur').value) }; 
-            const deviceData = { ChannelId: cId, locationNumber: parseInt(document.getElementById('devLoc').value), calibrationDate: document.getElementById('devDate').value }; 
-            try { 
-                const selectedDate = new Date(deviceData.calibrationDate);
-                if (selectedDate > new Date()) { alert("Дата калібрування не може бути в майбутньому!"); return; }
-                if (!dId) { const sensor = await api('/api/task1/sensors', 'POST', sensorData); deviceData.SensorId = sensor.id; await api('/api/task1/devices', 'POST', deviceData); } 
-                else { if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData); await api(`/api/task1/devices/${dId}`, 'PUT', deviceData); } 
-                document.getElementById('deviceModal').close(); syncData(); 
-            } catch (err) { alert(err); } 
-        }
-        async function deleteDevice(id) { if(confirm('Видалити пристрій?')) { await api(`/api/task1/devices/${id}`, 'DELETE'); syncData(); } }
+        async function saveChannel(e) { e.preventDefault(); const id = document.getElementById('channelId').value; const body = { name: document.getElementById('channelName').value }; try { if (id) await api(`/api/task1/channels/${id}`, 'PUT', body); else await api('/api/task1/channels', 'POST', body); document.getElementById('channelModal').close(); syncData(); } catch (err) { if(err.message !== "BANNED" && err.message !== "Невірний пароль") alert(err); } }
+        async function deleteChannel(id) { if(confirm('Видалити канал?')) { try{ await api(`/api/task1/channels/${id}`, 'DELETE'); syncData(); }catch(e){}} }
+        function openDeviceModal(channelId, device = null) { document.getElementById('deviceChannelId').value = channelId; document.getElementById('deviceId').value = device?.id || ''; document.getElementById('sensorId').value = device?.SensorId || ''; document.getElementById('devLoc').value = device?.locationNumber || ''; document.getElementById('devDate').value = device?.calibrationDate || ''; document.getElementById('devDate').max = new Date().toISOString().split('T')[0]; document.getElementById('sensType').value = device?.Sensor?.magnitudeType ?? '0'; document.getElementById('sensMin').value = device?.Sensor?.minRange ?? ''; document.getElementById('sensMax').value = device?.Sensor?.maxRange ?? ''; document.getElementById('sensCur').value = device?.Sensor?.currentValue ?? ''; document.getElementById('deviceModalTitle').innerText = device ? 'Редагувати Пристрій' : 'Новий Пристрій'; document.getElementById('deviceModal').showModal(); }
+        async function saveDevice(e) { e.preventDefault(); const cId = document.getElementById('deviceChannelId').value; const dId = document.getElementById('deviceId').value; const sId = document.getElementById('sensorId').value; const sensorData = { magnitudeType: parseInt(document.getElementById('sensType').value), minRange: parseFloat(document.getElementById('sensMin').value), maxRange: parseFloat(document.getElementById('sensMax').value), currentValue: parseFloat(document.getElementById('sensCur').value) }; const deviceData = { ChannelId: cId, locationNumber: parseInt(document.getElementById('devLoc').value), calibrationDate: document.getElementById('devDate').value }; try { if (new Date(deviceData.calibrationDate) > new Date()) { alert("Дата калібрування не може бути в майбутньому!"); return; } if (!dId) { const sensor = await api('/api/task1/sensors', 'POST', sensorData); deviceData.SensorId = sensor.id; await api('/api/task1/devices', 'POST', deviceData); } else { if (sId) await api(`/api/task1/sensors/${sId}`, 'PUT', sensorData); await api(`/api/task1/devices/${dId}`, 'PUT', deviceData); } document.getElementById('deviceModal').close(); syncData(); } catch (err) { if(err.message !== "BANNED" && err.message !== "Невірний пароль") alert(err); } }
+        async function deleteDevice(id) { if(confirm('Видалити пристрій?')) { try{ await api(`/api/task1/devices/${id}`, 'DELETE'); syncData();}catch(e){} } }
 
         // ================= TASK 2 =================
         async function loadComps(isManualSync = false) {
             try {
                 const comps = await api('/api/task2/competitions');
-                if (!comps || !Array.isArray(comps)) return;
+                if (!comps || !Array.isArray(comps)) { document.getElementById('comps-container').innerHTML = '<span class="error-text">Немає доступу до бази даних.</span>'; if (isManualSync) showSyncMessage('Помилка з\'єднання!', true); return; }
                 if (isManualSync) showSyncMessage(comps.length === 0 ? 'База даних пуста!' : 'Успішно синхронізовано!');
-
                 let html = '';
                 for (const c of comps) {
-                    let best = 'Немає виступів';
-                    if (c.performances && c.performances.length > 0) {
-                        const topPerf = c.performances.reduce((p, current) => p.resultScore > current.resultScore ? p : current);
-                        best = topPerf.Participant?.lastName ?? 'Невідомо';
-                    }
-
-                    html += `<div class="card">
-                        <div class="card-header">
-                            <strong>${escapeHTML(c.name)} | Переможець: ${escapeHTML(best)}</strong>
-                            <div class="actions">
-                                <button class="btn-primary" onclick="openCompModal(${c.id}, '${escapeHTML(c.name)}')">Редаг.</button>
-                                <button class="btn-danger" onclick="deleteComp(${c.id})">Видалити</button>
-                                <button class="btn-success" onclick="openPerfModal(${c.id})">+ Виступ</button>
-                            </div>
-                        </div>
-                        <ul class="item-list">`;
-                    
-                    if (c.performances) {
-                        for (const p of c.performances) {
-                            const fName = p.Participant?.firstName ?? 'Н/Д';
-                            const lName = p.Participant?.lastName ?? 'Н/Д';
-                            html += `<li>
-                                <span>Учасник: ${escapeHTML(fName)} ${escapeHTML(lName)} | Командний: ${p.isTeam} | Бали: <b>${p.resultScore}</b></span>
-                                <div class="actions">
-                                    <button class="btn-primary" onclick='openPerfModal(${c.id}, ${JSON.stringify(p)})'>Редаг.</button>
-                                    <button class="btn-danger" onclick="deletePerf(${p.id})">Видал.</button>
-                                </div>
-                            </li>`;
-                        }
-                    }
+                    let best = 'Немає виступів'; if (c.performances && c.performances.length > 0) { const topPerf = c.performances.reduce((p, current) => p.resultScore > current.resultScore ? p : current); best = topPerf.Participant?.lastName ?? 'Невідомо'; }
+                    html += `<div class="card"><div class="card-header"><strong>${escapeHTML(c.name)} | Переможець: ${escapeHTML(best)}</strong><div class="actions"><button class="btn-primary" onclick="openCompModal(${c.id}, '${escapeHTML(c.name)}')">Редаг.</button><button class="btn-danger" onclick="deleteComp(${c.id})">Видалити</button><button class="btn-success" onclick="openPerfModal(${c.id})">+ Виступ</button></div></div><ul class="item-list">`;
+                    if (c.performances) { for (const p of c.performances) { html += `<li><span>Учасник: ${escapeHTML(p.Participant?.firstName ?? 'Н/Д')} ${escapeHTML(p.Participant?.lastName ?? 'Н/Д')} | Командний: ${p.isTeam} | Бали: <b>${p.resultScore}</b></span><div class="actions"><button class="btn-primary" onclick='openPerfModal(${c.id}, ${JSON.stringify(p)})'>Редаг.</button><button class="btn-danger" onclick="deletePerf(${p.id})">Видал.</button></div></li>`; } }
                     html += `</ul></div>`;
                 }
                 document.getElementById('comps-container').innerHTML = html || 'Немає змагань.';
-            } catch (e) { 
-                document.getElementById('comps-container').innerHTML = `<span class="error-text">Помилка: ${e.message}</span>`;
-                if (isManualSync) showSyncMessage('Помилка з\'єднання!', true);
-            }
+            } catch (e) { if(e.message !== "BANNED" && e.message !== "Невірний пароль") document.getElementById('comps-container').innerHTML = `<span class="error-text">Помилка: ${e.message}</span>`; if (isManualSync) showSyncMessage('Помилка з\'єднання!', true); }
         }
 
         function openCompModal(id = '', name = '') { document.getElementById('compId').value = id; document.getElementById('compName').value = name; document.getElementById('compModalTitle').innerText = id ? 'Редагувати' : 'Нове'; document.getElementById('compModal').showModal(); }
-        async function saveComp(e) { e.preventDefault(); const id = document.getElementById('compId').value; const body = { name: document.getElementById('compName').value }; try { if (id) await api(`/api/task2/competitions/${id}`, 'PUT', body); else await api('/api/task2/competitions', 'POST', body); document.getElementById('compModal').close(); syncData(); } catch (err) { alert(err); } }
-        async function deleteComp(id) { if(confirm('Видалити змагання?')) { await api(`/api/task2/competitions/${id}`, 'DELETE'); syncData(); } }
-        
-        function openPerfModal(compId, perf = null) { 
-            document.getElementById('perfCompId').value = compId; document.getElementById('perfId').value = perf?.id || ''; document.getElementById('partId').value = perf?.ParticipantId || ''; document.getElementById('partFirst').value = perf?.Participant?.firstName ?? ''; document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; 
-            const today = new Date().toISOString().split('T')[0]; document.getElementById('partDate').max = today;
-            document.getElementById('perfTeam').checked = perf?.isTeam ?? false; document.getElementById('perfScore').value = perf?.resultScore ?? ''; document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; document.getElementById('perfModal').showModal(); 
-        }   
-        
-        async function savePerf(e) { 
-            e.preventDefault(); 
-            const cId = document.getElementById('perfCompId').value; const pId = document.getElementById('perfId').value; const partId = document.getElementById('partId').value; 
-            const partData = { firstName: document.getElementById('partFirst').value, lastName: document.getElementById('partLast').value, birthDate: document.getElementById('partDate').value }; 
-            const perfData = { CompetitionId: cId, isTeam: document.getElementById('perfTeam').checked, resultScore: parseFloat(document.getElementById('perfScore').value) }; 
-            try { 
-                const selectedDate = new Date(partData.birthDate);
-                if (selectedDate > new Date()) { alert("Дата народження не може бути в майбутньому!"); return; }
-                if (!pId) { const part = await api('/api/task2/participants', 'POST', partData); perfData.ParticipantId = part.id; await api('/api/task2/performances', 'POST', perfData); } 
-                else { await api(`/api/task2/participants/${partId}`, 'PUT', partData); await api(`/api/task2/performances/${pId}`, 'PUT', perfData); } 
-                document.getElementById('perfModal').close(); syncData(); 
-            } catch (err) { alert(err); } 
-        }
-        async function deletePerf(id) { if(confirm('Видалити виступ?')) { await api(`/api/task2/performances/${id}`, 'DELETE'); syncData(); } }
+        async function saveComp(e) { e.preventDefault(); const id = document.getElementById('compId').value; const body = { name: document.getElementById('compName').value }; try { if (id) await api(`/api/task2/competitions/${id}`, 'PUT', body); else await api('/api/task2/competitions', 'POST', body); document.getElementById('compModal').close(); syncData(); } catch (err) { if(err.message !== "BANNED" && err.message !== "Невірний пароль") alert(err); } }
+        async function deleteComp(id) { if(confirm('Видалити змагання?')) { try{ await api(`/api/task2/competitions/${id}`, 'DELETE'); syncData();}catch(e){} } }
+        function openPerfModal(compId, perf = null) { document.getElementById('perfCompId').value = compId; document.getElementById('perfId').value = perf?.id || ''; document.getElementById('partId').value = perf?.ParticipantId || ''; document.getElementById('partFirst').value = perf?.Participant?.firstName ?? ''; document.getElementById('partLast').value = perf?.Participant?.lastName ?? ''; document.getElementById('partDate').value = perf?.Participant?.birthDate ?? ''; document.getElementById('partDate').max = new Date().toISOString().split('T')[0]; document.getElementById('perfTeam').checked = perf?.isTeam ?? false; document.getElementById('perfScore').value = perf?.resultScore ?? ''; document.getElementById('perfModalTitle').innerText = perf ? 'Редагувати Виступ' : 'Новий Виступ'; document.getElementById('perfModal').showModal(); }   
+        async function savePerf(e) { e.preventDefault(); const cId = document.getElementById('perfCompId').value; const pId = document.getElementById('perfId').value; const partId = document.getElementById('partId').value; const partData = { firstName: document.getElementById('partFirst').value, lastName: document.getElementById('partLast').value, birthDate: document.getElementById('partDate').value }; const perfData = { CompetitionId: cId, isTeam: document.getElementById('perfTeam').checked, resultScore: parseFloat(document.getElementById('perfScore').value) }; try { if (new Date(partData.birthDate) > new Date()) { alert("Дата народження не може бути в майбутньому!"); return; } if (!pId) { const part = await api('/api/task2/participants', 'POST', partData); perfData.ParticipantId = part.id; await api('/api/task2/performances', 'POST', perfData); } else { await api(`/api/task2/participants/${partId}`, 'PUT', partData); await api(`/api/task2/performances/${pId}`, 'PUT', perfData); } document.getElementById('perfModal').close(); syncData(); } catch (err) { if(err.message !== "BANNED" && err.message !== "Невірний пароль") alert(err); } }
+        async function deletePerf(id) { if(confirm('Видалити виступ?')) { try{ await api(`/api/task2/performances/${id}`, 'DELETE'); syncData();}catch(e){} } }
 
         syncData();
     </script>
